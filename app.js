@@ -378,7 +378,7 @@
   var NAV = [["#home", "홈"], ["#fin", "가계"], ["#tx", "거래내역"], ["#meal", "식단"]];
   function shell() {
     document.body.insertAdjacentHTML("afterbegin",
-      '<header class="top"><div class="top-in"><span class="brand"><i></i>내 비서</span>' +
+      '<header class="top"><div class="top-in"><span class="brand"><i></i>General Assistant</span>' +
       '<button class="iconbtn" id="theme" title="밝게/어둡게">화면</button>' + (window.SEC_LOGOUT ? '<button class="iconbtn" id="lockbtn">잠그기</button>' : "") +
       '</div><nav class="tabs" id="nav">' + NAV.map(function (n) { return '<a href="' + n[0] + '">' + n[1] + "</a>"; }).join("") + "</nav></header>");
     var th = store("theme"); if (th) document.documentElement.setAttribute("data-theme", th);
