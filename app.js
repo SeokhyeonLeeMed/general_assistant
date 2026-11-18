@@ -356,7 +356,7 @@
       });
     } else if (sub === "학식") {
       var hl = N.hall;
-      o += '<p class="sub">학식조회.py가 ' + esc(hl.fetched) + "에 받아 온 것. 의대 본관·애기능·학생회관만 씁니다(천원의 아침은 뺐습니다).</p>";
+      o += '<p class="sub">학식조회.py가 ' + esc(hl.fetched) + "에 받아 온 것. 의대 본관·애기능·학생회관만 씁니다(천원의 아침 1,000원 줄 포함).</p>";
       if (hl.medImg) o += '<h2>의대 본관 식당 (' + esc(hl.medImg.name.replace("의대본관_", "")) + ')</h2><img class="menu" alt="의대 본관 주간 식단표" src="' + hl.medImg.src + '">';
       hl.halls.forEach(function (x) {
         o += "<h2>" + esc(x.name) + ' <span class="muted" style="font-size:13px;font-weight:400">' + esc(x.which === "this" ? "이번 주" : "다음 주") + " " + esc(x.week) + '</span></h2><div class="grid g3">' +
