@@ -1,6 +1,6 @@
 {
   "name": "General Assistant",
-  "short_name": "General Assistant",
+  "short_name": "Assistant",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
