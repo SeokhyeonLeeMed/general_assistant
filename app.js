@@ -327,6 +327,46 @@
     close();
     return o;
   }
+  // 표가 없는 시트(조리·영양, 보류 등): '제목 (메타, 메타)' 줄 + • 목록을 섹션 카드로.
+  //  제목에 기준·원칙·규칙 → 타일, 하지 않은·보류 → 보류 목록, 그 밖 → 번호 붙은 순서.
+  function inl(s) { return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/ → /g, ' <span class="arr">→</span> '); }
+  function splitHead(t) { // "김치콩나물국: 물 1L…" → ["김치콩나물국", "물 1L…"]
+    var i = t.indexOf(": "); return i > 0 && i <= 64 && t.slice(0, i).indexOf(". ") < 0 ? [t.slice(0, i), t.slice(i + 2)] : [null, t];
+  }
+  function metaChip(x) {
+    var icon = /\d/.test(x) && /분|시간/.test(x) ? ICON.clock : /\d+\/\d+/.test(x) ? ICON.cal : /끼/.test(x) ? ICON.meal : "";
+    return '<span class="meta">' + icon + esc(x) + "</span>";
+  }
+  function sectionsHtml(bl) {
+    var secs = [], cur = null, isB = function (b) { return b && b.t === "p" && /^[•·]/.test(b.x); };
+    function open(title) { cur = { title: title, items: [], notes: [] }; secs.push(cur); }
+    bl.forEach(function (b, i) {
+      if (isB(b)) { if (!cur) open(""); cur.items.push(b.x.replace(/^[•·]\s*/, "")); return; }
+      if (b.t === "h" || isB(bl[i + 1])) open(b.x);
+      else { if (!cur) open(""); cur.notes.push(b.x); }
+    });
+    return '<div class="secs">' + secs.map(function (s) {
+      var m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(s.title), name = m ? m[1] : s.title, chips = [], subs = [];
+      (m ? m[2].split(/,\s*/) : []).forEach(function (x) { (x.length > 16 ? subs : chips).push(x); });
+      var kind = /기준|원칙|규칙/.test(name) ? "tips" : /하지 않은|보류/.test(name) ? "hold" : "steps";
+      var o = '<section class="sec sec-' + kind + '">';
+      if (name) o += '<header class="sec-h"><div><h3>' + esc(name) + "</h3>" + (subs.length ? "<p>" + esc(subs.join(", ")) + "</p>" : "") + "</div>" +
+        (chips.length ? '<div class="metas">' + chips.map(metaChip).join("") + "</div>" : "") + "</header>";
+      if (kind === "steps") o += '<ol class="tl">' + s.items.map(function (t) {
+        var p = splitHead(t); return "<li>" + (p[0] ? "<b>" + inl(p[0]) + "</b>" : "") + "<span>" + inl(p[1]) + "</span></li>";
+      }).join("") + "</ol>";
+      else if (kind === "tips") o += '<div class="tiles">' + s.items.map(function (t) {
+        var p = splitHead(t); return '<div class="tile"><i>' + ICON.check + "</i><div>" + (p[0] ? "<b>" + inl(p[0]) + "</b>" : "") + "<span>" + inl(p[1]) + "</span></div></div>";
+      }).join("") + "</div>";
+      else o += '<div class="holds">' + s.items.map(function (t) {
+        var p = splitHead(t), hm = p[0] && /^(.*?)\s*\((.*)\)$/.exec(p[0]);
+        return '<div class="hld"><i>' + ICON.pause + "</i><div>" + (p[0] ? "<b>" + inl(hm ? hm[1] : p[0]) + "</b>" + (hm ? '<small>' + inl(hm[2]) + "</small>" : "") : "") +
+          "<span>" + inl(p[1]) + "</span></div></div>";
+      }).join("") + "</div>";
+      if (s.notes.length) o += '<div class="sec-notes">' + s.notes.map(function (x) { return "<p>" + inl(x) + "</p>"; }).join("") + "</div>";
+      return o + "</section>";
+    }).join("") + "</div>";
+  }
   function pageMeal(sub) {
     var names = N.sheets.map(function (s) { return s.name; }).concat(N.hall ? ["학식"] : []);
     sub = names.indexOf(sub) >= 0 ? sub : names[0];
@@ -369,7 +409,8 @@
       });
       if (!hl.halls.length) o += '<p class="muted">받아 온 학교 식단이 없습니다.</p>';
     } else {
-      o += blocksHtml(sheet(sub).blocks);
+      var bl = sheet(sub).blocks;
+      o += bl.some(function (b) { return b.t === "table"; }) ? blocksHtml(bl) : sectionsHtml(bl);
     }
     if (sub === "식단표" && N.todo.length) o += '<h2>영양사 에이전트 메모</h2><div class="card"><ul class="plain">' + N.todo.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + "</ul></div>";
     return o;
@@ -542,6 +583,10 @@
     tx: ic('<path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" stroke-width="2.6"/>'),
     pf: ic('<path d="M3.5 19.5h17"/><path d="M5 15.5l4.5-5 3.5 3 6-7"/><path d="M15 6.5h4v4"/>'),
     meal: ic('<path d="M3.5 11.5h17a8.5 8.5 0 0 1-17 0Z"/><path d="M9 4.5c-.8 1 .8 2-.1 3.5M13 4.5c-.8 1 .8 2-.1 3.5"/>'),
+    cal: ic('<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/>'),
+    clock: ic('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+    check: ic('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    pause: ic('<path d="M9.5 6.5v11M14.5 6.5v11"/>'),
     sun: ic('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>'),
     moon: ic('<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>'),
     lock: ic('<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>')
